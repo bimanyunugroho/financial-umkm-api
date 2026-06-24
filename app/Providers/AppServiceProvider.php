@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Repositories\Eloquent\CategoryEloquent;
 use App\Repositories\Eloquent\UserEloquent;
+use App\Repositories\Interfaces\CategoryInterface;
 use App\Repositories\Interfaces\UserInterface;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -18,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(UserInterface::class, UserEloquent::class);
+        $this->app->bind(CategoryInterface::class, CategoryEloquent::class);
     }
 
     /**

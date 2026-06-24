@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\HealthCheckController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CategoryController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,5 +36,8 @@ Route::prefix('v1')->group(function () {
             Route::put('me',      [AuthController::class, 'updateProfile']);
             Route::post('logout', [AuthController::class, 'logout']);
         });
+
+        Route::get('categories/search', [CategoryController::class, 'search']);
+        Route::apiResource('categories', CategoryController::class);
     });
 });
