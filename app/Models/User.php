@@ -11,6 +11,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
+use Carbon\Carbon;
 
 class User extends Authenticatable
 {
@@ -56,5 +57,23 @@ class User extends Authenticatable
     public function categories(): HasMany
     {
         return $this->hasMany(Category::class);
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    public function getTransactionsSummary(Carbon $from, Carbon $to): array
+    {
+        return $this->transactions()
+            ->whereBetween('date', [$from, $to])
+            ->selectRaw("
+                SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END)  AS total_income,
+                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS total_expense,
+                COUNT(*) AS total_transactions
+            ")
+            ->first()
+            ->toArray();
     }
 }

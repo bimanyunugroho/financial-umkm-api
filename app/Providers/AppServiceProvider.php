@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Repositories\Eloquent\CategoryEloquent;
+use App\Repositories\Eloquent\TransactionEloquent;
 use App\Repositories\Eloquent\UserEloquent;
 use App\Repositories\Interfaces\CategoryInterface;
+use App\Repositories\Interfaces\TransactionInterface;
 use App\Repositories\Interfaces\UserInterface;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -21,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(UserInterface::class, UserEloquent::class);
         $this->app->bind(CategoryInterface::class, CategoryEloquent::class);
+        $this->app->bind(TransactionInterface::class, TransactionEloquent::class);
     }
 
     /**

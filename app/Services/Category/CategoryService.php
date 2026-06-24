@@ -4,6 +4,7 @@ namespace App\Services\Category;
 
 use App\DTO\Category\StoreCategoryDTO;
 use App\DTO\Category\UpdateCategoryDTO;
+use App\Exceptions\ConflictException;
 use App\Exceptions\ForbiddenException;
 use App\Exceptions\ResourceNotFoundException;
 use App\Repositories\Interfaces\CategoryInterface;
@@ -61,9 +62,9 @@ class CategoryService
             throw new ForbiddenException('Kategori tidak ditemukan atau tidak dapat dihapus.');
         }
 
-        // if ($this->categoryRepo->hasTransactions($category)) {
-        //     throw new ConflictException('Kategori tidak dapat dihapus karena masih memiliki transaksi.');
-        // }
+        if ($this->categoryRepo->hasTransactions($category)) {
+            throw new ConflictException('Kategori tidak dapat dihapus karena masih memiliki transaksi.');
+        }
 
         $this->categoryRepo->delete($category);
     }

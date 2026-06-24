@@ -2,23 +2,20 @@
 
 namespace Database\Factories;
 
-use App\Models\Category;
+use App\Enums\TransactionType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<Category>
- */
 class CategoryFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
-            //
+            'user_id'    => null,
+            'name'       => fake()->word(),
+            'type'       => fake()->randomElement(TransactionType::cases()),
+            'icon'       => 'tag',
+            'color'      => fake()->hexColor(),
+            'is_default' => false,
         ];
     }
 }
