@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\HealthCheckController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\TransactionController;
+use App\Http\Controllers\Api\V1\ReportController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -43,5 +44,15 @@ Route::prefix('v1')->group(function () {
 
         Route::apiResource('transactions', TransactionController::class);
         Route::post('transactions/{transaction}/restore', [TransactionController::class, 'restore']);
+
+        Route::prefix('reports')->group(function () {
+            Route::get('summary',              [ReportController::class, 'summary']);
+            Route::get('profit-loss',          [ReportController::class, 'profitLoss']);
+            Route::get('cash-flow',            [ReportController::class, 'cashFlow']);
+            Route::get('by-category',          [ReportController::class, 'byCategory']);
+            Route::get('trend',                [ReportController::class, 'trend']);
+            Route::get('export',               [ReportController::class, 'export'])->middleware('throttle:export');
+            Route::get('export/status/{jobId}',[ReportController::class, 'exportStatus']);
+        });
     });
 });
