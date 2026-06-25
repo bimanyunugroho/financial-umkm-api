@@ -6,7 +6,9 @@ use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\ActivityLogController;
+use App\Http\Controllers\Api\V1\AiInsightController;
 use Illuminate\Support\Facades\Route;
+use OpenAI\Laravel\Facades\OpenAI;
 
 /*
 |--------------------------------------------------------------------------
@@ -60,6 +62,11 @@ Route::prefix('v1')->group(function () {
             Route::get('/',       [ActivityLogController::class, 'index']);
             Route::get('summary', [ActivityLogController::class, 'summary']);
             Route::get('subject', [ActivityLogController::class, 'forSubject']);
+        });
+
+        Route::prefix('ai')->middleware('throttle:ai')->group(function () {
+            Route::get('insights', [AiInsightController::class, 'insights']);
+            Route::post('ask',     [AiInsightController::class, 'ask']);
         });
     });
 });

@@ -64,6 +64,11 @@ class User extends Authenticatable
         return $this->hasMany(Transaction::class);
     }
 
+    public function aiInsightLogs(): HasMany
+    {
+        return $this->hasMany(AiInsightLog::class);
+    }
+
     public function getTransactionsSummary(Carbon $from, Carbon $to): array
     {
         return $this->transactions()

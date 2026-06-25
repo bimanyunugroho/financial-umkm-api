@@ -59,7 +59,7 @@ class AppServiceProvider extends ServiceProvider
         });
  
         RateLimiter::for('ai', function (Request $request) {
-            return Limit::perHour(20)
+            return Limit::perHour(10)
                 ->by($request->user()?->id ?? $request->ip());
         });
     }
