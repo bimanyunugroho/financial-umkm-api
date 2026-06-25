@@ -39,7 +39,7 @@ class TransactionService
         $transaction = $this->transactionRepo->create($dto->toArray());
         $this->bustCache($dto->userId);
 
-        return $transaction->load(['category', 'attachments']);
+        return $transaction->load(['category']);
     }
 
     public function update(string $id, string $userId, UpdateTransactionDTO $dto): Transaction
