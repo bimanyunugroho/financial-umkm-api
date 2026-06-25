@@ -11,6 +11,7 @@ use App\Http\Middleware\RequestLogger;
 use App\Http\Middleware\SanitizeInput;
 use App\Http\Middleware\EnsureUserNotBanned;
 use App\Http\Middleware\IdempotencyKey;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -27,17 +28,25 @@ return Application::configure(basePath: dirname(__DIR__))
             SanitizeInput::class
         ]);
 
-        $middleware->throttleWithRedis();
-
         $middleware->alias([
-            // 'auth'       => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            'throttle'   => \Illuminate\Routing\Middleware\ThrottleRequests::class,
             'not.banned' => EnsureUserNotBanned::class,
             'idempotent' => IdempotencyKey::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Throwable $e, Request $request) {
+            if ($e instanceof ThrottleRequestsException) {
+                $retryAfter = $e->getHeaders()['Retry-After'] ?? null;
+
+                return response()->json([
+                    'success'     => false,
+                    'message'     => $retryAfter
+                        ? "Terlalu banyak request. Coba lagi dalam {$retryAfter} detik."
+                        : 'Terlalu banyak request. Coba lagi nanti.',
+                    'retry_after' => $retryAfter ? (int) $retryAfter : null,
+                ], 429, $e->getHeaders());
+            }
+
             if ($request->is('api/*') || $request->expectsJson()) {
                 return app(Handler::class)->render($request, $e);
             }

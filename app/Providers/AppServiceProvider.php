@@ -36,61 +36,37 @@ class AppServiceProvider extends ServiceProvider
     }
 
     // ── Rate Limiters ──────────────────────────────────────────────────────
-
     private function configureRateLimiters(): void
     {
-        // General API — 60 req/min per authenticated user, fallback to IP
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(
                 (int) config('app.rate_limit_api', 60)
-            )->by($request->user()?->id ?? $request->ip())
-             ->response(fn () => response()->json([
-                 'success' => false,
-                 'message' => 'Terlalu banyak request. Coba lagi dalam 1 menit.',
-             ], 429));
+            )->by($request->user()?->id ?? $request->ip());
         });
-
-        // Auth endpoints — 5 req/min per IP (brute-force protection)
+ 
         RateLimiter::for('auth', function (Request $request) {
             return Limit::perMinute(
                 (int) config('app.rate_limit_auth', 5)
-            )->by($request->ip())
-             ->response(fn () => response()->json([
-                 'success' => false,
-                 'message' => 'Terlalu banyak percobaan. Coba lagi dalam 1 menit.',
-             ], 429));
+            )->by($request->ip());
         });
-
-        // Export — 5 req/hour per user (heavy operation)
+ 
         RateLimiter::for('export', function (Request $request) {
             return Limit::perHour(5)
-                ->by($request->user()?->id ?? $request->ip())
-                ->response(fn () => response()->json([
-                    'success' => false,
-                    'message' => 'Batas export 5x per jam tercapai.',
-                ], 429));
+                ->by($request->user()?->id ?? $request->ip());
         });
-
-        // AI — 20 req/hour per user (costs money)
+ 
         RateLimiter::for('ai', function (Request $request) {
             return Limit::perHour(20)
-                ->by($request->user()?->id ?? $request->ip())
-                ->response(fn () => response()->json([
-                    'success' => false,
-                    'message' => 'Batas AI insight 20x per jam tercapai.',
-                ], 429));
+                ->by($request->user()?->id ?? $request->ip());
         });
     }
-
-    // ── Activity Log Enrichment ────────────────────────────────────────────
-
+ 
     private function enrichActivityLog(): void
     {
-        // Attach IP, user-agent, and URL to every activity log entry
         Activity::saving(function (Activity $activity) {
             $req = request();
             if (! $req) return;
-
+ 
             $activity->properties = array_merge(
                 $activity->properties->toArray(),
                 [

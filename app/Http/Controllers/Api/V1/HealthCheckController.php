@@ -15,72 +15,193 @@ class HealthCheckController extends Controller
 {
     public function __invoke(): JsonResponse
     {
-        $checks  = [];
-        $healthy = true;
+        $checks = [];
 
-        // DATABASE
+        /*
+        |--------------------------------------------------------------------------
+        | Database
+        |--------------------------------------------------------------------------
+        */
         try {
             $start = microtime(true);
+
             DB::select('SELECT 1');
 
+            $latency = round((microtime(true) - $start) * 1000, 2);
+
+            $status = match (true) {
+                $latency > 1000 => 'unhealthy',
+                $latency > 500  => 'degraded',
+                default         => 'healthy',
+            };
+
             $checks['database'] = [
-                'status'  => 'ok',
-                'latency' => round((microtime(true) - $start) * 1000, 2) . 'ms',
+                'status'     => $status,
+                'latency_ms' => $latency,
             ];
         } catch (\Throwable $e) {
-            $checks['database'] = ['status' => 'fail', 'error' => 'Database connection failed'];
-            $healthy = false;
+            $checks['database'] = [
+                'status' => 'unhealthy',
+                'error'  => $e->getMessage(),
+            ];
         }
 
-        // REDIS
+        /*
+        |--------------------------------------------------------------------------
+        | Redis / Cache
+        |--------------------------------------------------------------------------
+        */
         try {
             $start = microtime(true);
-            Cache::put('_health_ping', 1, 5);
-            Cache::get('_health_ping');
+
+            Cache::put('_health_ping', now()->timestamp, 5);
+            $value = Cache::get('_health_ping');
+
+            $latency = round((microtime(true) - $start) * 1000, 2);
+
+            $status = match (true) {
+                $value === null => 'unhealthy',
+                $latency > 500  => 'degraded',
+                default         => 'healthy',
+            };
 
             $checks['redis'] = [
-                'status'  => 'ok',
-                'latency' => round((microtime(true) - $start) * 1000, 2) . 'ms',
+                'status'     => $status,
+                'latency_ms' => $latency,
             ];
         } catch (\Throwable $e) {
-            $checks['redis'] = ['status' => 'fail', 'error' => 'Redis connection failed'];
-            $healthy = false;
+            $checks['redis'] = [
+                'status' => 'unhealthy',
+                'error'  => $e->getMessage(),
+            ];
         }
 
-        // QUEUE
+        /*
+        |--------------------------------------------------------------------------
+        | Queue (Redis)
+        |--------------------------------------------------------------------------
+        */
         try {
-            $pending = Redis::connection('queue')->llen('queues:default') ?? 0;
+            $redis  = Redis::connection('queue');
+            $prefix = config('database.redis.options.prefix', '');
+            $queue  = 'exports';
+
+            $pendingKey   = "{$prefix}queues:{$queue}";
+            $reservedKey  = "{$prefix}queues:{$queue}:reserved";
+            $delayedKey   = "{$prefix}queues:{$queue}:delayed";
+
+            $pending    = (int) $redis->llen($pendingKey);
+            $processing = (int) $redis->zcard($reservedKey);
+            $delayed    = (int) $redis->zcard($delayedKey);
+
+            $total = $pending + $processing + $delayed;
+
+            $status = match (true) {
+                $pending > 1000 => 'unhealthy',
+                $pending > 100  => 'degraded',
+                default         => 'healthy',
+            };
+
             $checks['queue'] = [
-                'status'       => 'ok',
-                'pending_jobs' => (int) $pending,
+                'status' => $status,
+                'name'   => $queue,
+                'jobs'   => [
+                    'pending'    => $pending,
+                    'processing' => $processing,
+                    'delayed'    => $delayed,
+                    'total'      => $total,
+                ],
             ];
         } catch (\Throwable $e) {
-            $checks['queue'] = ['status' => 'degraded', 'error' => 'Queue check failed'];
+            $checks['queue'] = [
+                'status' => 'unhealthy',
+                'error'  => $e->getMessage(),
+            ];
         }
 
-        // DISK
-        $free  = disk_free_space(storage_path());
-        $total = disk_total_space(storage_path());
-        $usedPct = $total > 0 ? round((1 - $free / $total) * 100, 1) : 0;
+        /*
+        |--------------------------------------------------------------------------
+        | Disk Storage
+        |--------------------------------------------------------------------------
+        */
+        try {
+            $free  = disk_free_space(storage_path());
+            $total = disk_total_space(storage_path());
 
-        $checks['disk'] = [
-            'status'   => $usedPct < 85 ? 'ok' : ($usedPct < 95 ? 'warning' : 'critical'),
-            'used_pct' => $usedPct . '%',
-            'free_mb'  => round($free / 1024 / 1024, 1) . 'MB',
+            $usedPct = $total > 0
+                ? round((1 - ($free / $total)) * 100, 2)
+                : 0;
+
+            $status = match (true) {
+                $usedPct >= 95 => 'unhealthy',
+                $usedPct >= 85 => 'degraded',
+                default        => 'healthy',
+            };
+
+            $checks['disk'] = [
+                'status'   => $status,
+                'used_pct' => $usedPct,
+                'free_gb'  => round($free / 1024 / 1024 / 1024, 2),
+                'total_gb' => round($total / 1024 / 1024 / 1024, 2),
+            ];
+        } catch (\Throwable $e) {
+            $checks['disk'] = [
+                'status' => 'unhealthy',
+                'error'  => $e->getMessage(),
+            ];
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Memory Usage
+        |--------------------------------------------------------------------------
+        */
+        $memoryUsedMb = round(memory_get_usage(true) / 1024 / 1024, 2);
+        $memoryPeakMb = round(memory_get_peak_usage(true) / 1024 / 1024, 2);
+
+        $checks['memory'] = [
+            'status'       => 'healthy',
+            'used_mb'      => $memoryUsedMb,
+            'peak_used_mb' => $memoryPeakMb,
         ];
 
+        /*
+        |--------------------------------------------------------------------------
+        | Overall Status
+        |--------------------------------------------------------------------------
+        */
+        $overallStatus = 'healthy';
+
+        foreach ($checks as $check) {
+            if (($check['status'] ?? null) === 'unhealthy') {
+                $overallStatus = 'unhealthy';
+                break;
+            }
+
+            if (($check['status'] ?? null) === 'degraded') {
+                $overallStatus = 'degraded';
+            }
+        }
+
         return response()->json([
-            'success'   => $healthy,
-            'message'   => $healthy 
-                ? 'Semua sistem berjalan normal.' 
-                : 'Terdapat masalah pada sistem.',
-            'data'      => [
-                'status'    => $healthy ? 'healthy' : 'unhealthy',
-                'service'   => config('app.name'),
-                'version'   => 'v1',
-                'timestamp' => now()->toIso8601String(),
-                'checks'    => $checks,
+            'success' => $overallStatus !== 'unhealthy',
+            'message' => match ($overallStatus) {
+                'healthy'   => 'All systems operational.',
+                'degraded'  => 'System is operational with warnings.',
+                'unhealthy' => 'One or more critical services are unavailable.',
+            },
+            'data' => [
+                'status'      => $overallStatus,
+                'service'     => config('app.name'),
+                'environment' => config('app.env'),
+                'version'     => 'v1',
+                'timestamp'   => now()->toIso8601String(),
+                'checks'      => $checks,
             ],
-        ], $healthy ? 200 : 503);
+        ], match ($overallStatus) {
+            'healthy'   => 200,
+            'degraded'  => 200,
+            'unhealthy' => 503,
+        });
     }
 }
