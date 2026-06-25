@@ -10,8 +10,17 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "barryvdh/laravel-dompdf": "^3.1",
+        "dedoc/scramble": "^0.13.29",
         "laravel/framework": "^13.8",
-        "laravel/tinker": "^3.0"
+        "laravel/horizon": "^5.47",
+        "laravel/sanctum": "^4.0",
+        "laravel/tinker": "^3.0",
+        "maatwebsite/excel": "^3.1",
+        "openai-php/laravel": "^0.20.0",
+        "predis/predis": "^3.5",
+        "propaganistas/laravel-disposable-email": "^2.4",
+        "spatie/laravel-activitylog": "^5.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -45,7 +54,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
         ],
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
