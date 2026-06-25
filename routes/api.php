@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\ReportController;
+use App\Http\Controllers\Api\V1\ActivityLogController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -53,6 +54,12 @@ Route::prefix('v1')->group(function () {
             Route::get('trend',                [ReportController::class, 'trend']);
             Route::get('export',               [ReportController::class, 'export'])->middleware('throttle:export');
             Route::get('export/status/{jobId}',[ReportController::class, 'exportStatus']);
+        });
+
+        Route::prefix('activity')->group(function () {
+            Route::get('/',       [ActivityLogController::class, 'index']);
+            Route::get('summary', [ActivityLogController::class, 'summary']);
+            Route::get('subject', [ActivityLogController::class, 'forSubject']);
         });
     });
 });

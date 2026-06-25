@@ -29,33 +29,45 @@ class DatabaseSeeder extends Seeder
 
         $this->seedTransactions($demo);
 
-        // ── 3 additional random users ──────────────────────────────────────
         User::factory(3)->create()->each(function (User $user) {
-            $this->seedTransactions($user, 50);
+            $this->seedTransactions($user);
         });
 
         $this->command->info('Database seeded successfully!');
         $this->command->line('Demo user: demo@gmail.com / password123');
     }
 
-    private function seedTransactions(User $user, int $count = 200): void
+    private function seedTransactions(User $user): void
     {
-        $categories  = Category::whereNull('user_id')->get();
-        $incomeCategories  = $categories->where('type', 'income');
+        $categories = Category::whereNull('user_id')->get();
+
+        $incomeCategories = $categories->where('type', 'income');
         $expenseCategories = $categories->where('type', 'expense');
 
-        // Generate 6 months of realistic data
+        $createdTransactions = collect();
+
         for ($monthOffset = 5; $monthOffset >= 0; $monthOffset--) {
-            $date   = Carbon::now()->subMonths($monthOffset);
-            $year   = $date->year;
-            $month  = $date->month;
+
+            $date = Carbon::now()->subMonths($monthOffset);
+
+            $year = $date->year;
+            $month = $date->month;
             $daysInMonth = $date->daysInMonth;
 
-            // Income: 15-25 transactions per month (more realistic for warung)
+            // Income
             $incomeCount = rand(15, 25);
+
             for ($i = 0; $i < $incomeCount; $i++) {
-                $day = rand(1, min($daysInMonth, $monthOffset === 0 ? now()->day : $daysInMonth));
-                Transaction::factory()
+
+                $day = rand(
+                    1,
+                    min(
+                        $daysInMonth,
+                        $monthOffset === 0 ? now()->day : $daysInMonth
+                    )
+                );
+
+                $transaction = Transaction::factory()
                     ->income()
                     ->for($user)
                     ->create([
@@ -63,13 +75,34 @@ class DatabaseSeeder extends Seeder
                         'date'        => Carbon::create($year, $month, $day)->toDateString(),
                         'amount'      => $this->realisticIncomeAmount(),
                     ]);
+
+                $createdTransactions->push($transaction);
+
+                activity()
+                    ->causedBy($user)
+                    ->performedOn($transaction)
+                    ->event('created')
+                    ->withProperties([
+                        'amount' => $transaction->amount,
+                        'type'   => $transaction->type,
+                    ])
+                    ->log('Menambahkan transaksi pemasukan');
             }
 
-            // Expense: 20-35 transactions per month
+            // Expense
             $expenseCount = rand(20, 35);
+
             for ($i = 0; $i < $expenseCount; $i++) {
-                $day = rand(1, min($daysInMonth, $monthOffset === 0 ? now()->day : $daysInMonth));
-                Transaction::factory()
+
+                $day = rand(
+                    1,
+                    min(
+                        $daysInMonth,
+                        $monthOffset === 0 ? now()->day : $daysInMonth
+                    )
+                );
+
+                $transaction = Transaction::factory()
                     ->expense()
                     ->for($user)
                     ->create([
@@ -77,27 +110,77 @@ class DatabaseSeeder extends Seeder
                         'date'        => Carbon::create($year, $month, $day)->toDateString(),
                         'amount'      => $this->realisticExpenseAmount(),
                     ]);
+
+                $createdTransactions->push($transaction);
+
+                activity()
+                    ->causedBy($user)
+                    ->performedOn($transaction)
+                    ->event('created')
+                    ->withProperties([
+                        'amount' => $transaction->amount,
+                        'type'   => $transaction->type,
+                    ])
+                    ->log('Menambahkan transaksi pengeluaran');
             }
+        }
+
+        // Simulasi UPDATE
+        $updatedTransactions = $createdTransactions
+            ->shuffle()
+            ->take(min(20, $createdTransactions->count()));
+
+        foreach ($updatedTransactions as $transaction) {
+
+            activity()
+                ->causedBy($user)
+                ->performedOn($transaction)
+                ->event('updated')
+                ->withProperties([
+                    'amount' => $transaction->amount,
+                    'type'   => $transaction->type,
+                ])
+                ->log('Mengubah transaksi');
+        }
+
+        // Simulasi DELETE
+        $deletedTransactions = $createdTransactions
+            ->shuffle()
+            ->take(min(10, $createdTransactions->count()));
+
+        foreach ($deletedTransactions as $transaction) {
+
+            activity()
+                ->causedBy($user)
+                ->performedOn($transaction)
+                ->event('deleted')
+                ->withProperties([
+                    'amount' => $transaction->amount,
+                    'type'   => $transaction->type,
+                ])
+                ->log('Menghapus transaksi');
         }
     }
 
     private function realisticIncomeAmount(): int
     {
         $rand = rand(1, 100);
+
         return match (true) {
-            $rand <= 50 => rand(50_000, 500_000),     // 50% kecil
-            $rand <= 80 => rand(500_000, 2_000_000),  // 30% menengah
-            default     => rand(2_000_000, 8_000_000), // 20% besar
+            $rand <= 50 => rand(50_000, 500_000),
+            $rand <= 80 => rand(500_000, 2_000_000),
+            default     => rand(2_000_000, 8_000_000),
         };
     }
 
     private function realisticExpenseAmount(): int
     {
         $rand = rand(1, 100);
+
         return match (true) {
-            $rand <= 60 => rand(10_000, 300_000),     // 60% kecil (bahan)
-            $rand <= 85 => rand(300_000, 1_500_000),  // 25% menengah (gaji, sewa)
-            default     => rand(1_500_000, 5_000_000), // 15% besar (peralatan)
+            $rand <= 60 => rand(10_000, 300_000),
+            $rand <= 85 => rand(300_000, 1_500_000),
+            default     => rand(1_500_000, 5_000_000),
         };
     }
 }
