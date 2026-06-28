@@ -29,6 +29,8 @@
 | Auth | Laravel Sanctum (Bearer Token) |
 | Queue Monitor | Laravel Horizon (`/horizon`) |
 | API Docs | dedoc/scramble (`/docs/api`) |
+| Error Log | opcodesio/log-viewer (`/log-viewer`) |
+| Health Check | laravel-health by spatie |
 | AI | OpenRouter x OpenAI |
 | Export | PDF (DomPDF) + Excel (Maatwebsite) |
 
@@ -66,7 +68,7 @@ php artisan horizon
 
 # 8. Jalankan server | Buka Terminal 2
 composer run dev
-# → http://localhost:8000
+# http://localhost:8000
 ```
 
 **Demo account (setelah seeder):**
@@ -78,6 +80,10 @@ Password : password
 **Dokumentasi api (README.md)**
 ```
 Buka di folder /doc/api
+
+atau
+
+Buka http://localhost:8000/docs/api
 ```
 
 ---
