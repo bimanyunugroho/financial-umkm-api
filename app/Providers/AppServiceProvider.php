@@ -15,6 +15,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Activitylog\Models\Activity;
+use Spatie\Health\Checks\Checks\CacheCheck;
+use Spatie\Health\Checks\Checks\DatabaseCheck;
+use Spatie\Health\Checks\Checks\RedisCheck;
+use Spatie\Health\Checks\Checks\UsedDiskSpaceCheck;
+use Spatie\Health\Facades\Health;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,6 +41,16 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureRateLimiters();
         $this->enrichActivityLog();
+
+        Health::checks([
+            DatabaseCheck::new()
+                ->connectionName(config('database.default')),
+            CacheCheck::new(),
+            RedisCheck::new(),
+            UsedDiskSpaceCheck::new()
+                ->warnWhenUsedSpaceIsAbovePercentage(85)
+                ->failWhenUsedSpaceIsAbovePercentage(95)
+        ]);
     }
 
     // ── Rate Limiters ──────────────────────────────────────────────────────

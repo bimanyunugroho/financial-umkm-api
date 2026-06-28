@@ -96,14 +96,32 @@
 
         .btn-primary {
             background: #6366f1;
-            color: #fff;
+            color: #ffffff;
+            border: none;
         }
 
-        .btn-secondary {
-            background: #1e293b;
-            color: #94a3b8;
-            border: 1px solid #334155;
+        .btn-success {
+            background: #22c55e;
+            color: #ffffff;
+            border: none;
         }
+
+        .btn-warning {
+            background: #eab308;
+            color: #1f2937;
+            border: none;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: #ffffff;
+            border: none;
+        }
+
+        .btn-primary:hover    { background: #4f46e5; }
+        .btn-success:hover    { background: #16a34a; }
+        .btn-warning:hover    { background: #ca8a04; }
+        .btn-danger:hover     { background: #dc2626; }
 
         .status {
             display: inline-flex;
@@ -157,7 +175,8 @@
 
         <div class="links">
             <a href="/docs/api" class="btn btn-primary">API Docs</a>
-            <a href="/api/health" class="btn btn-secondary">Health Check</a>
+            <a href="/log-viewer" class="btn btn-danger">Error Log</a>
+            <a href="/api/health" class="btn btn-warning">Health Check</a>
         </div>
 
         <div class="status">

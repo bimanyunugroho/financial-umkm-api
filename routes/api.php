@@ -7,8 +7,8 @@ use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\ActivityLogController;
 use App\Http\Controllers\Api\V1\AiInsightController;
+use Spatie\Health\Http\Controllers\HealthCheckJsonResultsController;
 use Illuminate\Support\Facades\Route;
-use OpenAI\Laravel\Facades\OpenAI;
 
 /*
 |--------------------------------------------------------------------------
@@ -67,4 +67,7 @@ Route::prefix('v1')->group(function () {
             Route::post('ask',     [AiInsightController::class, 'ask']);
         });
     });
+
+    Route::get('/health', HealthCheckJsonResultsController::class)
+        ->middleware('auth:sanctum');
 });
